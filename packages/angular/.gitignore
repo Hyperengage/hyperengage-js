@@ -1,0 +1,10 @@
+.angular
+/dist
+/tmp
+/out-tsc
+/bazel-out
+.sass-cache/
+/connect.lock
+/coverage
+/libpeerconnection.log
+testem.log
