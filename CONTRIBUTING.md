@@ -1,4 +1,4 @@
-## Contributing to Jitsu SDK
+## Hyperengage SDK
 
 The requirements: 
  * `yarn` (>=1.22)
