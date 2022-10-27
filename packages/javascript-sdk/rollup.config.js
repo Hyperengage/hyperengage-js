@@ -26,7 +26,7 @@ export default [
     },
   },
   {
-    input: `src/jitsu.ts`,
+    input: `src/hyperengage.ts`,
     plugins: [
       typescriptPlugin,
       replace({
@@ -36,13 +36,13 @@ export default [
       }),
       copy({
         targets: [
-          {src: 'src/interface.d.ts', dest: 'dist/npm', rename: 'jitsu.d.ts'}
+          {src: 'src/interface.d.ts', dest: 'dist/npm', rename: 'hyperengage.d.ts'}
         ]
       })
     ],
     output: [
-      {file: 'dist/npm/jitsu.es.js', format: 'es'},
-      {file: 'dist/npm/jitsu.cjs.js', format: 'cjs'},
+      {file: 'dist/npm/hyperengage.es.js', format: 'es'},
+      {file: 'dist/npm/hyperengage.cjs.js', format: 'cjs'},
     ]
   }
 ];

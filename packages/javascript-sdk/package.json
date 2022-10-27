@@ -1,24 +1,24 @@
 {
-  "name": "@jitsu/sdk-js",
-  "version": "3.1.3",
-  "description": "Jitsu JavaScript SDK (more at http://jitsu.com/docs/js-sdk)",
-  "main": "dist/npm/jitsu.cjs.js",
-  "module": "dist/npm/jitsu.es.js",
-  "types": "dist/npm/jitsu.d.ts",
+  "name": "@hyperengage/sdk-js",
+  "version": "1.0.0",
+  "description": "Hyperengage JavaScript SDK",
+  "main": "dist/npm/hyperengage.cjs.js",
+  "module": "dist/npm/hyperengage.es.js",
+  "types": "dist/npm/hyperengage.d.ts",
   "files": [
     "dist/npm/*",
     "dist/web/*"
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/jitsucom/jitsu-js",
+    "url": "https://github.com/hyperengage/hyperengage-js",
     "directory": "packages/javascript-sdk"
   },
   "publishConfig": {
     "access": "public"
   },
   "private": false,
-  "author": "Jitsu Dev <dev@jitsu.com>",
+  "author": "Hyperengage Dev <dev@hyperengage.com>",
   "scripts": {
     "clean": "rm -rf ./dist",
     "devserver": "PORT=8081 nodemon --watch '__tests__/common/*.ts' --exec 'ts-node' __tests__/common/devserver.ts",

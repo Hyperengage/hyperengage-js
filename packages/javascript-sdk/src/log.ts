@@ -55,10 +55,10 @@ export function setDebugVar(name: string, val: any) {
     return;
   }
   let win = window as any;
-  if (!win.__jitsuDebug) {
-    win.__jitsuDebug = { };
+  if (!win.__hyperengageDebug) {
+    win.__hyperengageDebug = { };
   }
-  win.__jitsuDebug[name] = val;
+  win.__hyperengageDebug[name] = val;
 }
 
 

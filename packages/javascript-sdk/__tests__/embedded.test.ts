@@ -30,10 +30,9 @@ test("test embedded no init", async () => {
   expect(requestLog[0].api_key).toBe("Test2");
   expect(requestLog[0].src).toBe("eventn");
   expect(requestLog[0].eventn_ctx.click_id.gclid).toBe("1");
-  expect(requestLog[0].eventn_ctx.user.id).toBe("uid");
-  expect(requestLog[0].eventn_ctx.user.email).toBe("a@b.com");
-  expect(requestLog[0].eventn_ctx.user.anonymous_id).toBe(
-    requestLog[1].eventn_ctx.user.anonymous_id
+  expect(requestLog[0].eventn_ctx_id).toBe("uid");
+  expect(requestLog[0].eventn_ctx.anonymous_id).toBe(
+    requestLog[1].eventn_ctx.anonymous_id
   );
   server.clearRequestLog();
 });
@@ -67,9 +66,9 @@ test("test embedded", async () => {
   await waitFor(() => requestLog.length === 2, 1000)
   expect(requestLog[0].api_key).toBe("Test");
   expect(requestLog[0].click_id.gclid).toBe("1");
-  expect(requestLog[0].user.anonymous_id).toBeDefined();
-  expect(requestLog[0].user.anonymous_id).toBe(requestLog[1].user.anonymous_id);
-  expect(requestLog[1].user.anonymous_id).toBeDefined();
+  expect(requestLog[0].anonymous_id).toBeDefined();
+  expect(requestLog[0].anonymous_id).toBe(requestLog[1].anonymous_id);
+  expect(requestLog[1].anonymous_id).toBeDefined();
   expect(requestLog[1].extra).toBe(1);
   expect(requestLog[1].persistent_prop1).toBe(2);
   expect(requestLog[1].persistent_prop2).toBe(3);
@@ -88,9 +87,9 @@ test("test privacy policy", async () => {
   await waitFor(() => requestLog.length === 2, 1000)
   expect(requestLog[0].api_key).toBe("Test");
   expect(requestLog[0].click_id.gclid).toBe("1");
-  expect(requestLog[0].user.anonymous_id).toBe("");
-  expect(requestLog[0].user.anonymous_id).toBe(requestLog[1].user.anonymous_id);
-  expect(requestLog[1].user.anonymous_id).toBe("");
+  expect(requestLog[0].anonymous_id).toBe("");
+  expect(requestLog[0].anonymous_id).toBe(requestLog[1].anonymous_id);
+  expect(requestLog[1].anonymous_id).toBe("");
   expect(requestLog[1].extra).toBe(1);
   expect(requestLog[1].persistent_prop1).toBe(2);
   expect(requestLog[1].persistent_prop2).toBe(3);
@@ -113,7 +112,7 @@ test("test tag destination", async () => {
   await waitFor(() => requestLog.length === 1, 1000)
   expect(requestLog[0].api_key).toBe("Test");
   expect(requestLog[0].click_id.gclid).toBe("1");
-  expect(requestLog[0].user.anonymous_id).toBeDefined();
+  expect(requestLog[0].anonymous_id).toBeDefined();
   expect(requestLog[0].extra).toBe(1);
   expect(requestLog[0].persistent_prop1).toBe(2);
   expect(requestLog[0].persistent_prop2).toBe(3);
