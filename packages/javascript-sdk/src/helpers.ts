@@ -8,6 +8,30 @@ export const getCookieDomain = () => {
   return undefined;
 };
 
+export const verifyTraits = (props: any, type: 'account' | 'user') => {
+  if (type === 'account') {
+    if(!props?.account_id) {
+      return false
+    }
+    if(!props?.traits?.name) {
+      return false
+    }
+    return true;
+  }
+  else if(type === 'user') {
+    if(!props?.user_id) {
+      return false
+    }
+    if(!props?.traits?.name) {
+      return false
+    }
+    if(!props?.traits?.email) {
+      return false
+    }
+    return true;
+  }
+}
+
 let cookieParsingCache: Record<string, string>;
 
 export function parseCookieString(cookieStr?: string) {
@@ -45,7 +69,7 @@ export function insertAndExecute(element: HTMLElement, html: string) {
     if (script.innerHTML) {
       tag.innerHTML = script.innerHTML;
     }
-    tag.setAttribute("data-jitsu-tag-id", element.id);
+    tag.setAttribute("data-hyperengage-tag-id", element.id);
     document.getElementsByTagName("head")[0].appendChild(tag);
     scripts[index].parentNode.removeChild(scripts[index]);
   }

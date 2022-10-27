@@ -12,6 +12,7 @@ import {
   parseQuery,
   reformatDate,
   setCookie,
+  verifyTraits,
 } from "./helpers";
 import {
   ClientProperties,
@@ -21,11 +22,12 @@ import {
   EventCtx,
   EventPayload,
   EventSrc,
-  JitsuClient,
-  JitsuOptions,
+  HyperengageClient,
+  HyperengageOptions,
   Policy,
   TrackingEnvironment,
   UserProps,
+  AccountProps,
 } from "./interface";
 import { getLogger, setRootLogLevel } from "./log";
 import { isWindowAvailable, requireWindow } from "./window";
@@ -40,7 +42,7 @@ const VERSION_INFO = {
   version: "__buildVersion__",
 };
 
-const JITSU_VERSION = `${VERSION_INFO.version}/${VERSION_INFO.env}@${VERSION_INFO.date}`;
+const Hyperengage_VERSION = `${VERSION_INFO.version}/${VERSION_INFO.env}@${VERSION_INFO.date}`;
 let MAX_AGE_TEN_YEARS = 31_622_400 * 10;
 
 const beaconTransport: Transport = (
@@ -64,7 +66,7 @@ function tryFormat(string: string): string {
 }
 
 const echoTransport: Transport = (url: string, json: string) => {
-  console.log(`Jitsu client tried to send payload to ${url}`, tryFormat(json));
+  console.log(`Hyperengage client tried to send payload to ${url}`, tryFormat(json));
   return Promise.resolve();
 };
 
@@ -147,8 +149,8 @@ class NoPersistence implements Persistence {
 
 const defaultCompatMode = false;
 
-export function jitsuClient(opts?: JitsuOptions): JitsuClient {
-  let client = new JitsuClientImpl();
+export function hyperengageClient(opts?: HyperengageOptions): HyperengageClient {
+  let client = new HyperengageClientImpl();
   client.init(opts);
   return client;
 }
@@ -231,6 +233,7 @@ export function fetchApi(
       }
 
       const cookie = parseCookieString(req.headers["cookie"])[name];
+      console.log(cookie);
       if (!cookie) {
         const cookieOpts: CookieOpts = {
           maxAge: 31_622_400 * 10,
@@ -401,6 +404,7 @@ const xmlHttpTransport: Transport = (
   let req = new window.XMLHttpRequest();
   return new Promise<void>((resolve, reject) => {
     req.onerror = (e) => {
+      console.log(e);
       getLogger().error("Failed to send", jsonPayload, e);
       handler(-1, {});
       reject(new Error(`Failed to send JSON. See console logs`));
@@ -501,11 +505,13 @@ export type Transport = (
   handler?: (statusCode: number, responseBody: any) => void
 ) => Promise<void>;
 
-class JitsuClientImpl implements JitsuClient {
+class HyperengageClientImpl implements HyperengageClient {
   private userIdPersistence?: Persistence;
+  private accountIdPersistence?: Persistence;
   private propsPersistance?: Persistence;
 
   private userProperties: UserProps = {};
+  private accountProperties: AccountProps = {};
   private permanentProperties: PermanentProperties = {
     globalProps: {},
     propsPerEvent: {},
@@ -516,9 +522,10 @@ class JitsuClientImpl implements JitsuClient {
   private randomizeUrl: boolean = false;
 
   private apiKey: string = "";
+  private workspaceKey: string = "";
   private initialized: boolean = false;
   private _3pCookies: Record<string, boolean> = {};
-  private initialOptions?: JitsuOptions;
+  private initialOptions?: HyperengageOptions;
   private compatMode: boolean;
   private cookiePolicy: Policy = "keep";
   private ipPolicy: Policy = "keep";
@@ -532,9 +539,18 @@ class JitsuClientImpl implements JitsuClient {
   private flushing: boolean = false
   private attempt: number = 1
 
-  id(props: UserProps, doNotSendEvent?: boolean): Promise<void> {
-    this.userProperties = { ...this.userProperties, ...props };
-    getLogger().debug("Jitsu user identified", props);
+  user(props: UserProps, doNotSendEvent?: boolean): Promise<void> {
+    if(!verifyTraits(props, 'user')) {
+      getLogger().error("Failed to identify user due to missing mandatory fields");
+      return Promise.reject();
+    }
+    if(props?.account_id) {
+      this.userProperties = { ...this.userProperties, ...props };
+    }
+    else {
+      this.userProperties = { ...this.userProperties, account_id: this.accountProperties?.account_id, ...props }
+    }
+    getLogger().debug("Hyperengage user identified", props);
 
     if (this.userIdPersistence) {
       this.userIdPersistence.save(props);
@@ -542,11 +558,42 @@ class JitsuClientImpl implements JitsuClient {
       getLogger().warn("Id() is called before initialization");
     }
     if (!doNotSendEvent) {
-      return this.track("user_identify", {});
+      return this.track("user_identify", {traits: {...this.userProperties?.traits}});
     } else {
       return Promise.resolve();
     }
   }
+
+  account(props: AccountProps, doNotSendEvent?: boolean): Promise<void> {
+    if(!verifyTraits(props, 'account')) {
+      getLogger().error("Failed to identify account due to missing mandatory fields");
+      return Promise.reject();
+    }
+    this.accountProperties = { ...this.accountProperties, ...props };
+    getLogger().debug("Hyperengage account identified", props);
+
+    if (this.accountIdPersistence) {
+      this.accountIdPersistence.save(props);
+    } else {
+      getLogger().warn("account() is called before initialization");
+    }
+    if (!doNotSendEvent) {
+      return this.track("account_identify", {traits: this.accountProperties?.traits});
+    } else {
+      return Promise.resolve();
+    }
+  }
+
+  reset () {
+    this.userProperties = {};
+    this.accountProperties = {};
+    this.userIdPersistence.delete();
+    this.accountIdPersistence.delete();
+    this.propsPersistance.delete();
+    deleteCookie(this.idCookieName);
+    this.flush();
+    return Promise.resolve();
+  };
 
   rawTrack(payload: any) {
     return this.sendJson(payload);
@@ -562,6 +609,7 @@ class JitsuClientImpl implements JitsuClient {
       env = isWindowAvailable() ? envs.browser() : envs.empty();
     }
     this.restoreId();
+    this.restoreAccount();
     let context = this.getCtx(env);
 
     let persistentProps = {
@@ -570,6 +618,7 @@ class JitsuClientImpl implements JitsuClient {
     };
     let base = {
       api_key: this.apiKey,
+      workspace_key: this.workspaceKey,
       src,
       event_type,
       ...payloadData,
@@ -691,6 +740,7 @@ class JitsuClientImpl implements JitsuClient {
         }
       }
       this.userIdPersistence.delete();
+      this.accountIdPersistence.delete();
       this.propsPersistance.delete();
       deleteCookie(this.idCookieName);
     }
@@ -698,7 +748,7 @@ class JitsuClientImpl implements JitsuClient {
       let data = response;
       if (typeof response === "string" && response.length > 0) {
         data = JSON.parse(response);
-        let extras = data["jitsu_sdk_extras"];
+        let extras = data["hyperengage_sdk_extras"];
         if (extras && extras.length > 0) {
           const isWindow = isWindowAvailable();
           if (!isWindow) {
@@ -727,16 +777,15 @@ class JitsuClientImpl implements JitsuClient {
     let props = env.describeClient() || {};
     return {
       event_id: "", //generate id on the backend
-      user: {
-        anonymous_id:
-          this.cookiePolicy !== "strict"
-            ? env.getAnonymousId({
-                name: this.idCookieName,
-                domain: this.cookieDomain,
-              })
-            : "",
-        ...this.userProperties,
-      },
+      anonymous_id:
+        this.cookiePolicy !== "strict"
+          ? env.getAnonymousId({
+              name: this.idCookieName,
+              domain: this.cookieDomain,
+          })
+        : "",
+      user_id: this.userProperties?.user_id,
+      account_id: this.accountProperties?.account_id,
       ids: this._getIds(),
       utc_time: reformatDate(now.toISOString()),
       local_tz_offset: now.getTimezoneOffset(),
@@ -764,24 +813,24 @@ class JitsuClientImpl implements JitsuClient {
     getLogger().debug("track event of type", type, data);
     const e = this.makeEvent(
       type,
-      this.compatMode ? "eventn" : "jitsu",
+      this.compatMode ? "eventn" : "hyperengage",
       payload || {}
     );
     return this.sendJson(e);
   }
 
-  init(options: JitsuOptions) {
+  init(options: HyperengageOptions) {
     if (isWindowAvailable() && !options.force_use_fetch) {
       if (options.fetch) {
         getLogger().warn(
-          "Custom fetch implementation is provided to Jitsu. However, it will be ignored since Jitsu runs in browser"
+          "Custom fetch implementation is provided to Hyperengage. However, it will be ignored since Hyperengage runs in browser"
         );
       }
       this.transport = this.beaconApi ? beaconTransport : xmlHttpTransport;
     } else {
       if (!options.fetch && !globalThis.fetch) {
         throw new Error(
-          "Jitsu runs in Node environment. However, neither JitsuOptions.fetch is provided, nor global fetch function is defined. \n" +
+          "Hyperengage runs in Node environment. However, neither HyperengageOptions.fetch is provided, nor global fetch function is defined. \n" +
             "Please, provide custom fetch implementation. You can get it via node-fetch package"
         );
       }
@@ -800,7 +849,7 @@ class JitsuClientImpl implements JitsuClient {
 
     if (options.tracking_host === "echo") {
       getLogger().warn(
-        'jitsuClient is configured with "echo" transport. Outgoing requests will be written to console'
+        'hyperengageClient is configured with "echo" transport. Outgoing requests will be written to console'
       );
       this.transport = echoTransport;
     }
@@ -828,12 +877,16 @@ class JitsuClientImpl implements JitsuClient {
     }
     this.initialOptions = options;
     getLogger().debug(
-      "Initializing Jitsu Tracker tracker",
+      "Initializing Hyperengage Tracker tracker",
       options,
-      JITSU_VERSION
+      Hyperengage_VERSION
     );
     if (!options.key) {
-      getLogger().error("Can't initialize Jitsu, key property is not set");
+      getLogger().error("Can't initialize Hyperengage, key property is not set");
+      return;
+    }
+    if (!options.workspace_key) {
+      getLogger().error("Can't initialize Hyperengage, workspace_key property is not set");
       return;
     }
     this.compatMode =
@@ -842,11 +895,12 @@ class JitsuClientImpl implements JitsuClient {
         : !!options.compat_mode;
     this.cookieDomain = options.cookie_domain || getCookieDomain();
     this.trackingHost = getHostWithProtocol(
-      options["tracking_host"] || "t.jitsu.com"
+      options["tracking_host"] || "t.Hyperengage.com"
     );
     this.randomizeUrl = options.randomize_url || false;
     this.idCookieName = options.cookie_name || "__eventn_id";
     this.apiKey = options.key;
+    this.workspaceKey = options.workspace_key;
 
     if (this.cookiePolicy === "strict") {
       this.propsPersistance = new NoPersistence();
@@ -861,6 +915,14 @@ class JitsuClientImpl implements JitsuClient {
     } else {
       this.userIdPersistence = isWindowAvailable()
         ? new CookiePersistence(this.cookieDomain, this.idCookieName + "_usr")
+        : new NoPersistence();
+    }
+
+    if (this.cookiePolicy === "strict") {
+      this.accountIdPersistence = new NoPersistence();
+    } else {
+      this.accountIdPersistence = isWindowAvailable()
+        ? new CookiePersistence(this.cookieDomain, this.idCookieName + "_act")
         : new NoPersistence();
     }
 
@@ -900,7 +962,7 @@ class JitsuClientImpl implements JitsuClient {
 
     if (isWindowAvailable()) {
       if (!options.disable_event_persistence) {
-        this.queue = new LocalStorageQueue("jitsu-event-queue")
+        this.queue = new LocalStorageQueue("hyperengage-event-queue")
         this.scheduleFlush(0)
       }
 
@@ -934,6 +996,14 @@ class JitsuClientImpl implements JitsuClient {
             typeof analyticsOriginal.user().id === "function"
           ) {
             payload.obj.userId = analyticsOriginal.user().id();
+          }
+
+          if (
+            typeof analyticsOriginal.group === "function" &&
+            analyticsOriginal.group() &&
+            typeof analyticsOriginal.group().id === "function"
+          ) {
+            payload.obj.accountId = analyticsOriginal.group().id();
           }
         }
         if (payload?.obj?.timestamp) {
@@ -976,6 +1046,15 @@ class JitsuClientImpl implements JitsuClient {
     }
   }
 
+  private restoreAccount() {
+    if (this.accountIdPersistence) {
+      let props = this.accountIdPersistence.restore();
+      if (props) {
+        this.accountProperties = { ...props, ...this.accountProperties };
+      }
+    }
+  }
+
   set(properties, opts?) {
     const eventType = opts?.eventType;
     const persist = opts?.persist === undefined || opts?.persist;
@@ -1013,7 +1092,7 @@ class JitsuClientImpl implements JitsuClient {
   }
 }
 
-function interceptSegmentCalls(t: JitsuClient) {
+function interceptSegmentCalls(t: HyperengageClient) {
   let win = window as any;
   if (!win.analytics) {
     win.analytics = [];

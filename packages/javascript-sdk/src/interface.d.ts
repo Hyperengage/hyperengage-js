@@ -1,6 +1,6 @@
-export declare function jitsuClient(opts: JitsuOptions): JitsuClient
+export declare function hyperengageClient(opts: HyperengageOptions): HyperengageClient
 
-export type JitsuClient = {
+export type HyperengageClient = {
   /**
    * Sends a third-party event (event intercepted from third-party system, such as analytics.js or GA). Should
    * not be called directly
@@ -17,7 +17,8 @@ export type JitsuClient = {
    * @param payload event payload
    * @return Promise, see _send3p documentation
    */
-  track: (typeName: string, payload?: EventPayload) => Promise<void>
+
+  track: (type: string, payload?: EventPayload) => Promise<void>
 
   // /**
   //  * Similar to track(), but send unstructured payload to EventNative processing pipeline. No
@@ -32,12 +33,23 @@ export type JitsuClient = {
    * @param doNotSendEvent if true (false by default), separate "id" event won't be sent to server
    * @return Promise, see _send3p documentation
    */
-  id: (userData: UserProps, doNotSendEvent?: boolean) => Promise<void>
+  user: (userData: UserProps, doNotSendEvent?: boolean) => Promise<void>
+
+    /**
+   * Sets a user data
+   * @param accountData user data (as map id_type --> value, such as "email": "a@bcd.com"
+   * @param doNotSendEvent if true (false by default), separate "id" event won't be sent to server
+   * @return Promise, see _send3p documentation
+   */
+  account: (accountData: AccountProps, doNotSendEvent?: boolean) => Promise<void>
+
+  reset: () => Promise<void>
+  
   /**
    * Initializes tracker. Must be called
    * @param initialization options
    */
-  init: (opts: JitsuOptions) => void
+  init: (opts: HyperengageOptions) => void
 
   /**
    * Explicit call for intercepting Segment's analytics.
@@ -59,13 +71,11 @@ export type JitsuClient = {
    * User
    */
   unset(propertyName: string, opts: { eventType?: string, persist?: boolean });
-
 }
-
 /**
- * Type of jitsu function which is exported to window.jitsu when tracker is embedded from server
+ * Type of hyperengage function which is exported to window.hyperengage when tracker is embedded from server
  */
-export type JitsuFunction = (action: 'track' | 'id' | 'set', eventType: string, payload?: EventPayload) => void;
+export type HyperengageFunction = (action: 'track' | 'id' | 'set', eventType: string, payload?: EventPayload) => void;
 
 /**
  * User identification method:
@@ -77,23 +87,23 @@ export type IdMethod = 'cookie' | 'ls'
 
 /**
  * Policy configuration affects cookies storage and IP handling.
- *  - strict: Jitsu doesn't store cookies and replaces last octet in IP address (10.10.10.10 -> 10.10.10.1)
- *  - keep: Jitsu uses cookies for user identification and saves full IP
- *  - comply: Jitsu checks customer country and tries to comply with Regulation laws (such as GDPR, UK's GDPR (PECR) and California's GDPR (CCPA)
+ *  - strict: Hyperengage doesn't store cookies and replaces last octet in IP address (10.10.10.10 -> 10.10.10.1)
+ *  - keep: Hyperengage uses cookies for user identification and saves full IP
+ *  - comply: Hyperengage checks customer country and tries to comply with Regulation laws (such as GDPR, UK's GDPR (PECR) and California's GDPR (CCPA)
  */
 export type Policy = 'strict' | 'keep' | 'comply'
 
 /**
- * Configuration options of Jitsu
+ * Configuration options of Hyperengage
  */
-export type JitsuOptions = {
+export type HyperengageOptions = {
 
   /**
-   * A custom fetch implementation. Here's how Jitsu decides what functions to use to execute HTTP requests
+   * A custom fetch implementation. Here's how Hyperengage decides what functions to use to execute HTTP requests
    *
-   * - If Jitsu runs in browser, this parameter will be ignored. The best available API (most likely, XMLHttpRequest)
+   * - If Hyperengage runs in browser, this parameter will be ignored. The best available API (most likely, XMLHttpRequest)
    *   will be used for sending reqs
-   * - For node Jitsu will use this param. If it's not set, Jitsu will try to search for fetch in global environment
+   * - For node Hyperengage will use this param. If it's not set, Hyperengage will try to search for fetch in global environment
    *   and will fail if it's absent
    *
    *
@@ -102,13 +112,13 @@ export type JitsuOptions = {
   fetch?: any,
 
   /**
-   * Forces Jitsu SDK to use the fetch implementation (custom or default) even in browser
+   * Forces Hyperengage SDK to use the fetch implementation (custom or default) even in browser
    */
   force_use_fetch?: any,
 
   /**
-   * If Jitsu should work in compatibility mode. If set to true:
-   *  - event_type will be set to 'eventn' instead of 'jitsu'
+   * If Hyperengage should work in compatibility mode. If set to true:
+   *  - event_type will be set to 'eventn' instead of 'hyperengage'
    *  - EventCtx should be written in eventn_ctx node as opposed to to event root
    */
   compat_mode?: boolean
@@ -129,7 +139,7 @@ export type JitsuOptions = {
   cookie_domain?: string
   /**
    * Tracking host (where API calls will be sent). If not set,
-   * we'd try to do the best to "guess" it. Last resort is t.jitsu.com.
+   * we'd try to do the best to "guess" it. Last resort is t.hyperengage.com.
    *
    * Though this parameter is not required, it's highly recommended to set is explicitly
    */
@@ -144,6 +154,7 @@ export type JitsuOptions = {
    * in some cases (where server is configured with exactly one client key)
    */
   key: string
+  workspace_key: string
   /**
    * If google analytics events should be intercepted. Read more about event interception
    * at https://docs.eventnative.org/sending-data/javascript-reference/events-interception
@@ -166,7 +177,7 @@ export type JitsuOptions = {
   randomize_url?: boolean
 
   /**
-   * If Jitsu should capture third-party cookies: either array
+   * If Hyperengage should capture third-party cookies: either array
    * of cookies name or false if the features should be disabled
    *
    * @default GA/Segment/Fb cookies: ['_ga': '_fbp', '_ym_uid', 'ajs_user_id', 'ajs_anonymous_id']
@@ -228,18 +239,35 @@ export type JitsuOptions = {
    */
   disable_event_persistence?: boolean
 
-  //NOTE: If any property is added here, please make sure it's added to browser.ts jitsuProps as well
+  //NOTE: If any property is added here, please make sure it's added to browser.ts hyperengageProps as well
 };
 
 /**
  * User properties (ids).
  */
-export interface UserProps {
+export type UserProps = {
   anonymous_id?: string             //anonymous is (cookie or ls based),
-  id?: string                       //user id (non anonymous). If not set, first known id (from propName below) will be used
-  email?: string                    //user id (non anonymous). If not set, first known id (from propName below) will be used
-  [propName: string]: any           //any other forms of ids
+  user_id: string                       //user id (non anonymous). If not set, first known id (from propName below) will be used
+  account_id?: string
+  traits : {
+    email: string,         
+    name: string,           
+    [traitName: string]: any,           //any other forms of ids
+  }
+} | {
+  anonymous_id?: string        
+  user_id?: undefined  
+  traits?: never
 }
+
+export type AccountProps = {
+  account_id: string                       //Account id (non anonymous). If not set, first known id (from propName below) will be used
+  traits: {
+    name: string                    //Required name of the account
+    [traitName: string]: any         //any other forms of ids
+  }
+} | {
+};
 
 /**
  * Ids for third-party tracking systems
@@ -267,11 +295,12 @@ export type Conversion = {
  */
 export type EventCtx = {
   event_id: string                 //unique event id or empty string for generating id on the backend side
-  user: UserProps                  //user properties
+  anonymous_id?: string
+  user_id: UserProps | string
+  account_id: AccountProps | string            //account properties
   ids?: ThirdpartyIds              //user ids from external systems
   utc_time: string                 //current UTC time in ISO 8601
   local_tz_offset: number          //local timezone offset (in minutes)
-
   utm: Record<string, string>      //utm tags (without utm prefix, e.g key will be "source", not utm_source. See
   click_id: Record<string, string> //all external click ids (passed through URL). See CLICK_IDS for supported all supported click ids
   [propName: string]: any          //context is extendable, any extra properties can be added here
@@ -287,7 +316,7 @@ export type TrackingEnvironment = {
    */
   describeClient(): Partial<ClientProperties>;
   /**
-   * Returns source ip. If IP should be resolved by Jitsu server, this method should return undefined
+   * Returns source ip. If IP should be resolved by Hyperengage server, this method should return undefined
    */
   getSourceIp(): string | undefined;
 
@@ -298,7 +327,7 @@ export type TrackingEnvironment = {
   getAnonymousId(cookieOpts: { name: string, domain?: string }): string;
 };
 /**
- * List of environments where Jitsu tracker can work. See TrackingEnvironment above
+ * List of environments where Hyperengage tracker can work. See TrackingEnvironment above
  * to learn what is the environment
  */
 export type Envs = {
@@ -363,7 +392,7 @@ export type ClientProperties = {
 export type EventPayload = Partial<ClientProperties> & {
   /**
    * If track() is called in node env, it's possible to provide
-   * request/response. In this case Jitsu will try to use it for
+   * request/response. In this case Hyperengage will try to use it for
    * getting request data (url, referer and etc). Also, it will be used for
    * setting and getting cookies
    */
@@ -373,15 +402,20 @@ export type EventPayload = Partial<ClientProperties> & {
 
   conversion?: Conversion          //Conversion data if events indicates a conversion
   src_payload?: any,               //Third-party payload if event is intercepted from third-party source
-  [propName: string]: any          //payload is extendable, any extra properties can be added here
+  properties?: {
+    [propName: string]: any          //payload is extendable, any extra properties can be added here
+  }
+  traits?: {
+    [traitName: string]: any          //payload is extendable, any extra properties can be added here
+  }
 }
 
 /**
  * Type of event source
  */
 export type EventSrc =
-  'jitsu'    |                     //event came directly from Jitsu
-  'eventn'   |                     //same as jitsu but for 'compat' mode, see
+  'hyperengage'    |                     //event came directly from Hyperengage
+  'eventn'   |                     //same as hyperengage but for 'compat' mode, see
   'ga'       |                     //event is intercepted from GA
   '3rdparty' |                     //event is intercepted from 3rdparty source
   'ajs';                           //event is intercepted from analytics.js
@@ -393,6 +427,7 @@ export type EventBasics = {
   source_ip?: string               //IP address. Do not set this field on a client side, it will be rewritten on the server
   anon_ip?: string                 //First 3 octets of an IP address. Same as IP - will be set on a server
   api_key: string                  //JS api key
+  workspace_key: string            //Hyperengage workspace key
   src: EventSrc                    //Event source
   event_type: string               //event type
 }

@@ -3,12 +3,12 @@
  *
  * DO NOT DELETE LINE ABOVE, THIS IS AN INSTRUCTION FOR JEST
  *
- * This test suite verifies that Jitsu works as a npm package with DOM
+ * This test suite verifies that Hyperengage works as a npm package with DOM
  * env
  */
 
-import { envs, jitsuClient } from "../src/jitsu";
-import { JitsuClient } from "../src/interface";
+import { envs, hyperengageClient } from "../src/hyperengage";
+import { HyperengageClient } from "../src/interface";
 import { sleep, waitFor } from "./common/common";
 
 type RequestCache = {
@@ -76,8 +76,9 @@ beforeAll(() => {
 
 test("test browser with retries", async () => {
   mockDisabled = true
-  let jitsu: JitsuClient = jitsuClient({
+  let hyperengage: HyperengageClient = hyperengageClient({
     key: "Test",
+    workspace_key: "123",
     tracking_host: "https://test-host.com",
     custom_headers: () => ({
       "test1": "val1",
@@ -88,8 +89,8 @@ test("test browser with retries", async () => {
     max_send_timeout: 10,
   });
 
-  await jitsu.id({ email: "john.doe@gmail.com", id: "1212" });
-  await jitsu.track("page_view", { test: 1 });
+  await hyperengage.user({ traits: {email: "john.doe@gmail.com", name: 'Zeeshan'}, user_id: "1212" });
+  await hyperengage.track("page_view", { properties: {test: 1} });
 
   await sleep(500)
   mockDisabled = false
@@ -103,19 +104,20 @@ test("test browser with retries", async () => {
   expect(requestLog[0].headers?.test1).toBe("val1")
   expect(requestLog[0].headers?.test2).toBe("val2")
 
-  expect(event1?.user?.anonymous_id).toBe(event2?.user?.anonymous_id)
-  expect(event1?.user?.email).toBe('john.doe@gmail.com')
-  expect(event2?.user?.email).toBe('john.doe@gmail.com')
-  expect(event1?.user?.id).toBe('1212')
-  expect(event2?.user?.id).toBe('1212')
+  expect(event1?.anonymous_id).toBe(event2?.anonymous_id)
+  expect(event1?.traits.email).toBe('john.doe@gmail.com')
+  expect(event2?.properties.test).toBe(1)
+  expect(event1?.user_id).toBe('1212')
+  expect(event2?.user_id).toBe('1212')
   expect(event1.event_type).toBe('user_identify')
   expect(event2.event_type).toBe('page_view')
 });
 
 test("test browser sync", async () => {
   let counter = 0
-  let jitsu: JitsuClient = jitsuClient({
+  let hyperengage: HyperengageClient = hyperengageClient({
     key: "Test",
+    workspace_key: "1234",
     tracking_host: "https://test-host.com",
     custom_headers: () => ({
       "test1": "val1",
@@ -123,8 +125,8 @@ test("test browser sync", async () => {
     }),
     max_send_attempts: 1
   });
-  await jitsu.id({ email: "john.doe@gmail.com", id: "1212" });
-  await jitsu.track("page_view", { test: 1 });
+  await hyperengage.user({ traits: {name:'zizou', email: "john.doe@gmail.com"}, user_id: "1212" });
+  await hyperengage.track("page_view", {properties: { test: 1 }});
   expect(requestLog.length).toBe(2)
   console.log("Requests", requestLog)
   const event1 = JSON.parse(requestLog[0].payload)
@@ -136,19 +138,20 @@ test("test browser sync", async () => {
   expect(requestLog[0].headers?.test1).toBe("val1")
   expect(requestLog[1].headers?.test1).toBe("val1")
 
-  expect(event1?.user?.anonymous_id).toBe(event2?.user?.anonymous_id)
-  expect(event1?.user?.email).toBe('john.doe@gmail.com')
-  expect(event2?.user?.email).toBe('john.doe@gmail.com')
-  expect(event1?.user?.id).toBe('1212')
-  expect(event2?.user?.id).toBe('1212')
+  expect(event1?.anonymous_id).toBe(event2?.anonymous_id)
+  expect(event1?.traits.email).toBe('john.doe@gmail.com')
+  expect(event2?.properties.test).toBe(1)
+  expect(event1?.user_id).toBe('1212')
+  expect(event2?.user_id).toBe('1212')
   expect(event1.event_type).toBe('user_identify')
   expect(event2.event_type).toBe('page_view')
 });
 
 test("test browser max attempts exceeded", async () => {
   mockDisabled = true
-  let jitsu: JitsuClient = jitsuClient({
+  let hyperengage: HyperengageClient = hyperengageClient({
     key: "Test",
+    workspace_key: "zeeshhi",
     tracking_host: "https://test-host.com",
     custom_headers: () => ({
       "test1": "val1",
@@ -159,14 +162,14 @@ test("test browser max attempts exceeded", async () => {
     max_send_timeout: 10,
   });
 
-  await jitsu.id({ email: "john.doe@gmail.com", id: "1212" });
-
+  await hyperengage.user({ traits: {email: "john.doe@gmail.com", name: "zeeshi"}, user_id: "1212" });
   await sleep(500)
   mockDisabled = false
 
-  await jitsu.track("page_view", { test: 1 });
+  await hyperengage.track("page_view", { properties: {test: 1} });
 
   await waitFor(() => requestLog.length === 1, 1000)
+
 
   console.log("Requests", requestLog)
   const event2 = JSON.parse(requestLog[0].payload)
@@ -174,7 +177,6 @@ test("test browser max attempts exceeded", async () => {
   expect(requestLog[0].headers?.test1).toBe("val1")
   expect(requestLog[0].headers?.test2).toBe("val2")
 
-  expect(event2?.user?.email).toBe('john.doe@gmail.com')
-  expect(event2?.user?.id).toBe('1212')
+  expect(event2?.user_id).toBe('1212')
   expect(event2.event_type).toBe('page_view')
 });
