@@ -1,6 +1,6 @@
 {
   "name": "@hyperengage/sdk-js",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Hyperengage JavaScript SDK",
   "main": "dist/npm/hyperengage.cjs.js",
   "module": "dist/npm/hyperengage.es.js",
