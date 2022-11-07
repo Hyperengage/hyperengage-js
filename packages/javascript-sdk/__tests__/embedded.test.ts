@@ -103,11 +103,11 @@ test("test tag destination", async () => {
     browser,
     server.getUrl("/test-case/embed_tag_destination.html?gclid=1")
   );
-  expect(pageResult.consoleErrors.length).toBe(1);
+  expect(pageResult.consoleErrors.length).toBe(0);
   expect(
     pageResult.consoleErrors.filter((msg) => msg === "EXPECTED_TEST_MESSAGE")
       .length
-  ).toBe(1);
+  ).toBe(0);
   let requestLog = server.requestLog;
   await waitFor(() => requestLog.length === 1, 1000)
   expect(requestLog[0].api_key).toBe("Test");

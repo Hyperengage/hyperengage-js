@@ -89,7 +89,7 @@ test("test browser with retries", async () => {
     max_send_timeout: 10,
   });
 
-  await hyperengage.user({ traits: {email: "john.doe@gmail.com", name: 'Zeeshan'}, user_id: "1212" });
+  await hyperengage.identify_user({ traits: {email: "john.doe@gmail.com", name: 'Zeeshan'}, user_id: "1212" });
   await hyperengage.track("page_view", { properties: {test: 1} });
 
   await sleep(500)
@@ -125,7 +125,7 @@ test("test browser sync", async () => {
     }),
     max_send_attempts: 1
   });
-  await hyperengage.user({ traits: {name:'zizou', email: "john.doe@gmail.com"}, user_id: "1212" });
+  await hyperengage.identify_user({ traits: {name:'zizou', email: "john.doe@gmail.com"}, user_id: "1212" });
   await hyperengage.track("page_view", {properties: { test: 1 }});
   expect(requestLog.length).toBe(2)
   console.log("Requests", requestLog)
@@ -162,7 +162,7 @@ test("test browser max attempts exceeded", async () => {
     max_send_timeout: 10,
   });
 
-  await hyperengage.user({ traits: {email: "john.doe@gmail.com", name: "zeeshi"}, user_id: "1212" });
+  await hyperengage.identify_user({ traits: {email: "john.doe@gmail.com", name: "zeeshi"}, user_id: "1212" });
   await sleep(500)
   mockDisabled = false
 
