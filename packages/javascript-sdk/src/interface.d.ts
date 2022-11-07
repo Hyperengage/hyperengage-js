@@ -33,7 +33,7 @@ export type HyperengageClient = {
    * @param doNotSendEvent if true (false by default), separate "id" event won't be sent to server
    * @return Promise, see _send3p documentation
    */
-  user: (userData: UserProps, doNotSendEvent?: boolean) => Promise<void>
+  identify_user: (userData: UserProps, doNotSendEvent?: boolean) => Promise<void>
 
     /**
    * Sets a user data
@@ -41,7 +41,7 @@ export type HyperengageClient = {
    * @param doNotSendEvent if true (false by default), separate "id" event won't be sent to server
    * @return Promise, see _send3p documentation
    */
-  account: (accountData: AccountProps, doNotSendEvent?: boolean) => Promise<void>
+  identify_account: (accountData: AccountProps, doNotSendEvent?: boolean) => Promise<void>
 
   reset: () => Promise<void>
   
@@ -257,6 +257,7 @@ export type UserProps = {
 } | {
   anonymous_id?: string        
   user_id?: undefined  
+  account_id?: string
   traits?: never
 }
 
@@ -267,6 +268,8 @@ export type AccountProps = {
     [traitName: string]: any         //any other forms of ids
   }
 } | {
+  account_id?: undefined,
+  traits?: never
 };
 
 /**

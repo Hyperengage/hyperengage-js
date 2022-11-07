@@ -38,8 +38,8 @@ async function createTestServer()  {
     });
     console.log('Processed. Sending data to Hyperengage')
     try {
-      await hyperengage.account({account_id: '1234', traits: {name:"Segment"}}, true)
-      await hyperengage.user({user_id: '1212', traits: {name:"Zeeshan", email: 'zeeshan@123.com'}}, true)
+      await hyperengage.identify_account({account_id: '1234', traits: {name:"Segment"}}, true)
+      await hyperengage.identify_user({user_id: '1212', traits: {name:"Zeeshan", email: 'zeeshan@123.com'}}, true)
       await hyperengage.track('page_view', {properties: {test: 1}, env: envs.express(req, res)});
       res.status(200).send({status: 'ok'});
     } catch (e) {

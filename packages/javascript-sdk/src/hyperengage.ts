@@ -539,7 +539,7 @@ class HyperengageClientImpl implements HyperengageClient {
   private flushing: boolean = false
   private attempt: number = 1
 
-  user(props: UserProps, doNotSendEvent?: boolean): Promise<void> {
+  identify_user(props: UserProps, doNotSendEvent?: boolean): Promise<void> {
     if(!verifyTraits(props, 'user')) {
       getLogger().error("Failed to identify user due to missing mandatory fields");
       return Promise.reject();
@@ -564,7 +564,7 @@ class HyperengageClientImpl implements HyperengageClient {
     }
   }
 
-  account(props: AccountProps, doNotSendEvent?: boolean): Promise<void> {
+  identify_account(props: AccountProps, doNotSendEvent?: boolean): Promise<void> {
     if(!verifyTraits(props, 'account')) {
       getLogger().error("Failed to identify account due to missing mandatory fields");
       return Promise.reject();
